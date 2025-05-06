@@ -1,0 +1,26 @@
+/* Hide Google Translate widget and branding */
+.skiptranslate,
+.goog-te-banner-frame,
+#goog-gt-tt,
+.goog-te-balloon-frame,
+div#goog-gt- {
+  display: none !important;
+}
+
+/* Remove top offset added by Google Translate */
+body {
+  top: 0 !important;
+  position: initial !important;
+}
+
+/* Hide menu value and attribution */
+.goog-te-menu-value,
+.goog-logo-link,
+.goog-te-gadget {
+  display: none !important;
+}
+
+/* Remove frame shadow */
+.goog-te-menu-frame {
+  box-shadow: none !important;
+}

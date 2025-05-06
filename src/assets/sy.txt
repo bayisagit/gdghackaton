@@ -1,0 +1,262 @@
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import headache from '../assets/headache.jpg';
+import cough from '../assets/cough.png';
+import fever from '../assets/fever.jpg';
+import sore from '../assets/sore.png';
+import fatigue from '../assets/fatigue.png';
+
+const sampleSymptoms = [
+  { id: 1, name: 'Fever', description: 'Elevated body temperature above normal.', image_url: fever, severity: 'Moderate' },
+  { id: 2, name: 'Cough', description: 'Sudden expulsion of air from airways.', image_url: cough, severity: 'Mild' },
+  { id: 3, name: 'Headache', description: 'Pain in the head or neck region.', image_url: headache, severity: 'Mild' },
+  { id: 4, name: 'Sore Throat', description: 'Pain or irritation in the throat.', image_url: sore, severity: 'Mild' },
+  { id: 5, name: 'Fatigue', description: 'Persistent tiredness or lack of energy.', image_url: fatigue, severity: 'Moderate' },
+  { id: 6, name: 'Chest Pain', description: 'Discomfort or pain in the chest.', image_url: headache, severity: 'Moderate' },
+  { id: 7, name: 'Diarrhea', description: 'Frequent loose or watery stools.', image_url: fatigue, severity: 'Mild' },
+  { id: 8, name: 'Dizziness', description: 'Sensation of lightheadedness.', image_url: headache, severity: 'Mild' },
+  { id: 9, name: 'Joint Pain', description: 'Soreness in body joints.', image_url: sore, severity: 'Moderate' },
+  { id: 10, name: 'Loss of Appetite', description: 'Reduced desire to eat.', image_url: fatigue, severity: 'Mild' },
+  { id: 11, name: 'Muscle Aches', description: 'Generalized muscle pain.', image_url: sore, severity: 'Moderate' },
+  { id: 12, name: 'Nasal Congestion', description: 'Blocked nasal passages.', image_url: cough, severity: 'Mild' },
+  { id: 13, name: 'Nausea', description: 'Urge to vomit with stomach discomfort.', image_url: fatigue, severity: 'Moderate' },
+  { id: 14, name: 'Rash', description: 'Redness or itching on skin.', image_url: sore, severity: 'Mild' },
+  { id: 15, name: 'Shortness of Breath', description: 'Difficulty breathing.', image_url: cough, severity: 'Moderate' },
+];
+
+const severityOptions = ['Mild', 'Moderate', 'Severe'];
+
+const SymptomChecker = () => {
+  const [symptoms] = useState(sampleSymptoms);
+  const [selectedSymptoms, setSelectedSymptoms] = useState([]);
+  const [conditions, setConditions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  const accessToken = localStorage.getItem('accessToken') || '';
+  const healthUrl = 'http://localhost:5000';
+
+  const handleSymptomClick = (symptomId) => {
+    setSelectedSymptoms((prev) => {
+      const isSelected = prev.find((s) => s.id === symptomId);
+      if (isSelected) {
+        return prev.filter((s) => s.id !== symptomId);
+      }
+      return [...prev, { id: symptomId, severity: 'Mild' }];
+    });
+    setConditions([]);
+    setError('');
+  };
+
+  const handleSeverityChange = (symptomId, newSeverity) => {
+    setSelectedSymptoms((prev) =>
+      prev.map((s) => (s.id === symptomId ? { ...s, severity: newSeverity } : s))
+    );
+  };
+
+  const handleDiagnose = async () => {
+    if (selectedSymptoms.length === 0) {
+      setError('Please select at least one symptom.');
+      return;
+    }
+
+    if (!accessToken) {
+      setError('Please log in to diagnose symptoms.');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+    try {
+      const payload = {
+        symptoms: selectedSymptoms.map(({ id, severity }) => ({
+          id,
+          severity: severity.toLowerCase(),
+        })),
+      };
+      const response = await fetch(`${healthUrl}/checks/`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (response.ok) {
+        const checkData = await response.json();
+        const conditionIds = checkData.conditions || [];
+        if (conditionIds.length > 0) {
+          const conditionPromises = conditionIds.map((id) =>
+            fetch(`${healthUrl}/conditions/${id}/`, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }).then((res) => res.json())
+          );
+          let conditionData = await Promise.all(conditionPromises);
+          conditionData = conditionData.filter((c) => c.name).map((condition) => ({
+            ...condition,
+            recommendation: condition.recommendation || getMockRecommendation(condition.severity),
+          }));
+          setConditions(conditionData);
+        } else {
+          setConditions([]);
+        }
+      } else {
+        const errorData = await response.json();
+        setError(errorData.message || 'Failed to diagnose symptoms.');
+      }
+    } catch (err) {
+      setError('An error occurred while diagnosing symptoms.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getMockRecommendation = (severity) => {
+    switch (severity?.toLowerCase()) {
+      case 'mild':
+        return 'Rest, stay hydrated, and monitor symptoms. Consult a doctor if symptoms persist.';
+      case 'moderate':
+        return 'Consult a healthcare provider for evaluation. Rest and avoid strenuous activities.';
+      case 'severe':
+        return 'Seek immediate medical attention. Visit a hospital or call emergency services.';
+      default:
+        return 'Consult a healthcare provider for personalized advice.';
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col items-center py-10 px-4">
+      <h1 className="text-4xl font-bold text-gray-900 mb-8">MediHelp Symptom Checker</h1>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-100 text-red-700 px-4 py-3 rounded-lg mb-6 flex justify-between items-center w-full max-w-3xl">
+          <span className="text-sm">{error}</span>
+          <button onClick={() => setError('')} className="text-red-700 hover:text-red-900">
+            ×
+          </button>
+        </div>
+      )}
+
+      {/* Login Prompt */}
+      {!accessToken && (
+        <div className="bg-yellow-100 text-yellow-800 px-4 py-3 rounded-lg mb-6 text-center w-full max-w-3xl">
+          <p className="text-sm">
+            Please{' '}
+            <Link to="/login" className="underline text-blue-600 hover:text-blue-800">
+              log in
+            </Link>{' '}
+            to diagnose symptoms.
+          </p>
+        </div>
+      )}
+
+      {/* Symptoms List */}
+      <div className="w-full max-w-3xl bg-white p-6 rounded-lg shadow-md mb-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Select Your Symptoms</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {symptoms.map((symptom) => (
+            <button
+              key={symptom.id}
+              onClick={() => handleSymptomClick(symptom.id)}
+              className={`p-4 rounded-lg border text-left transition ${
+                selectedSymptoms.find((s) => s.id === symptom.id)
+                  ? 'border-blue-500 bg-blue-50'
+                  : 'border-gray-200 bg-white hover:bg-gray-50'
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              disabled={!accessToken}
+            >
+              <div className="flex items-center">
+                <img
+                  src={symptom.image_url}
+                  alt={symptom.name}
+                  className="w-12 h-12 object-cover rounded-md mr-3"
+                />
+                <div>
+                  <span className="font-medium text-gray-800">{symptom.name}</span>
+                  <p className="text-xs text-gray-500 mt-1">{symptom.description}</p>
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Selected Symptoms */}
+      {selectedSymptoms.length > 0 && (
+        <div className="w-full max-w-3xl bg-white p-6 rounded-lg shadow-md mb-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Selected Symptoms</h2>
+          <div className="space-y-3">
+            {selectedSymptoms.map(({ id, severity }) => {
+              const symptom = symptoms.find((s) => s.id === id);
+              return (
+                <div key={id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center space-x-4">
+                    <span className="font-medium text-gray-800">{symptom?.name}</span>
+                    <select
+                      value={severity}
+                      onChange={(e) => handleSeverityChange(id, e.target.value)}
+                      className="px-3 py-1 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                      disabled={!accessToken}
+                    >
+                      {severityOptions.map((option) => (
+                        <option key={option} value={option}>
+                          {option}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <button
+                    onClick={() => handleSymptomClick(id)}
+                    className="text-blue-600 hover:text-blue-800 text-lg"
+                    disabled={!accessToken}
+                  >
+                    ×
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <button
+            onClick={handleDiagnose}
+            className="mt-6 w-full bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading || !accessToken}
+          >
+            {loading ? 'Diagnosing...' : 'Diagnose'}
+          </button>
+        </div>
+      )}
+
+      {/* Diagnoses Results */}
+      {conditions.length > 0 && (
+        <div className="w-full max-w-3xl bg-white p-6 rounded-lg shadow-md">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">Possible Diagnoses</h2>
+          <div className="space-y-4">
+            {conditions.map((condition) => (
+              <div key={condition.id} className="border-b border-gray-200 pb-4 last:border-b-0">
+                <h3 className="font-medium text-gray-800">{condition.name}</h3>
+                {condition.description && (
+                  <p className="text-sm text-gray-600 mt-1">{condition.description}</p>
+                )}
+                {condition.severity && (
+                  <p className="text-sm text-gray-600 mt-1">Severity: {condition.severity}</p>
+                )}
+                <p className="text-sm text-blue-600 mt-2">
+                  Recommended Action: {condition.recommendation}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+      {conditions.length === 0 && selectedSymptoms.length > 0 && !loading && (
+        <div className="w-full max-w-3xl bg-white p-6 rounded-lg shadow-md">
+          <p className="text-gray-600 text-sm">No diagnoses found for the selected symptoms.</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default SymptomChecker;
