@@ -36,7 +36,7 @@ function App() {
 
         {/* Routes inside Layout wrapper */}
         <Route element={<Layout />}>
-          <Route path="/Contu" element={<Contu />}/>
+          <Route path="/Contact" element={<Contu />}/>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={<Home />} />
           <Route path="/find-doctor/:id" element={<ViewProfile />} />

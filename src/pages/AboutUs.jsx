@@ -10,7 +10,7 @@ const About = () => {
       title: 'Meet The Team',
       description: 'We are a dedicated team of React and Django developers committed to building meaningful digital solutions. MediHelp is one of our key projects, developed to provide accessible, accurate, and practical health information to users. Our goal is to combine technology and healthcare knowledge to support better decision-making and promote well-being.',
       buttonText: 'Contact Us',
-      buttonLink: '/Contu'
+      buttonLink: '/Contact'
     }
   };
 
